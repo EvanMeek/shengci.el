@@ -34,6 +34,23 @@
   :group 'applications
   :prefix 'shengci-)
 
+(defvar shengci-buffer-name "*shengci*" "The name of shengci buffer.")
+
+(defcustom shengci-mode-hook nil
+  "The hook for shengci mode."
+  :type 'hook
+  :group 'shengci)
+
+(define-derived-mode shengci-mode nil "shengci"
+  "The mode of shengci mdoe."
+  :group 'shengci
+  :abbrev-table nil
+  :syntax-table nil
+  (shengci)
+  (shengci-check-path) 
+  (setq buffre-read-only t
+		truncate-lines nil))
+
 (defcustom shengci-word-info nil
   "The info of word.
 单词的信息"
@@ -58,8 +75,6 @@ shengci插件的缓存目录路径"
   :type 'string
   :group 'shengci)
 
-
-
 (defcustom shengci-cache-word-file-path (concat shengci-cache-word-dir-path "all-words-table.json")
   "All recorded the words.
 所有已记录的单词"
@@ -71,6 +86,16 @@ shengci插件的缓存目录路径"
 所有已记住的单词"
   :type 'string
   :group 'shengci)
+
+;;;###autoload
+(defun shengci ()
+  "Initialize shengci buffer when shengci-mode is activated
+激活shengci-mode时初始化shengci buffer"
+  (if (get-buffer shengci-buffer-name)
+	  (switch-to-buffer shengci-buffer-name)
+	(unless (buffer-live-p (get-buffer shengci-buffer-name))
+	  (switch-to-buffer shengci-buffer-name))
+	(shengci-interface-init)))
 
 (define-namespace shengci-
 
@@ -104,7 +129,6 @@ shengci插件的缓存目录路径"
   (interactive)
   "capture new word and save to all recorded word cache file.
 捕获新的生词，并且保存到生词缓存文件中"
-  (shengci-check-path)
   (let* ((word-info (youdao-dictionary--request (thing-at-point 'word)))
 		 (word-eng (cdr (assoc 'query word-info)))
 		 (word-basic (cdr (assoc 'basic word-info)))
@@ -150,8 +174,8 @@ shengci插件的缓存目录路径"
 							 nil
 						   (json-read-file shengci-cache-word-file-path)))
 		(all-memorized-cache-words (if (string= (f-read-text shengci-cache-memorized-word-file-path) "")
-										nil
-									  (json-read-file shengci-cache-memorized-word-file-path)))
+									   nil
+									 (json-read-file shengci-cache-memorized-word-file-path)))
 		(delete-word-file-path (concat shengci-cache-word-dir-path word "-cache.json")) )
 	(if (string= (read-minibuffer (format "确定要删除%s吗(y/n)? :" word)) "y")
 		(progn
@@ -181,16 +205,16 @@ shengci插件的缓存目录路径"
   "let word was memorized
 让单词改变为记住的"
   (let* ((memorized-word-file-path (if (file-exists-p (concat shengci-cache-word-dir-path word "-cache.json"))
-										(concat shengci-cache-word-dir-path word "-cache.json")
-									  nil))
+									   (concat shengci-cache-word-dir-path word "-cache.json")
+									 nil))
 		 (cache-word-json-data (if (null memorized-word-file-path)
 								   (progn (message "不存在此单词.")
 										  nil)
 								 (json-read-file memorized-word-file-path)))
 		 ;; 记录所有已记住单词更改
 		 (all-the-memorized-words (if (string= (f-read-text shengci-cache-memorized-word-file-path) "")
-									   nil
-									 (json-read-file shengci-cache-memorized-word-file-path))))
+									  nil
+									(json-read-file shengci-cache-memorized-word-file-path))))
 	(when (not (null cache-word-json-data))
 	  ;; Delete the contents of all recorded word cache files first
 	  ;; 先将所有已记录单词缓存文件内容删除
@@ -268,8 +292,18 @@ shengci插件的缓存目录路径"
 		   nil
 		 (push word-file-path all-memorized-words)))
 	 (map-values all-cache-words))
-	all-memorized-words)))
+	all-memorized-words))
 
+(defun interface-init ()
+	"init shengci "
+	(with-current-buffer shengci-buffer-name
+	  (setq buffer-read-only nil)
+	  (erase-buffer)
+	  (insert (propertize
+			   "ShengCi - 生词表")
+			  'face '(:height 1 :foreground "DeepSkyBlue"))
+	  (setq buffer-read-only true)))
+)
 
 (provide 'shengci)
 ;;; shengci.el ends here
