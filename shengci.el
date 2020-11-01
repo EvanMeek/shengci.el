@@ -7,7 +7,7 @@
 ;; Version: 0.0.1
 ;; Package-Requires: ((emacs "26.0") (youdao-dictionary "0.4") (f "0.20.0") )
 ;; License: GPL-3.0
-;; Repository: https://github.com/SpringHan/shengci.el
+;; Repository: https://github.com/EvanMeek/shengci.el
 
 ;;; This file is NOT part of GNU Emacs
 
@@ -35,21 +35,7 @@
   :prefix 'shengci-)
 
 (defvar shengci-buffer-name "*shengci*" "The name of shengci buffer.")
-
-(defcustom shengci-mode-hook nil
-  "The hook for shengci mode."
-  :type 'hook
-  :group 'shengci)
-
-(define-derived-mode shengci-mode nil "shengci"
-  "The mode of shengci mdoe."
-  :group 'shengci
-  :abbrev-table nil
-  :syntax-table nil
-  (shengci)
-  (shengci-check-path) 
-  (setq buffre-read-only t
-		truncate-lines nil))
+(defvar shengci-record-buffer-name "*shengci-record*" "The name of shengci-record buffer")
 
 (defcustom shengci-word-info nil
   "The info of word.
@@ -294,15 +280,46 @@ shengci插件的缓存目录路径"
 	 (map-values all-cache-words))
 	all-memorized-words))
 
-(defun interface-init ()
-	"init shengci "
-	(with-current-buffer shengci-buffer-name
-	  (setq buffer-read-only nil)
-	  (erase-buffer)
-	  (insert (propertize
-			   "ShengCi - 生词表")
-			  'face '(:height 1 :foreground "DeepSkyBlue"))
-	  (setq buffer-read-only true)))
+(defun get-word-info (word-path)
+  "获取单词信息
+get word info"
+  (json-read-file word-path))
+
+(defun show-record-word ()
+  "显示已记录单词"
+  (let ((buf (get-buffer-create shengci-record-buffer-name))
+		word-info)
+	(pop-to-buffer buf)
+	(erase-buffer)
+	(setq buffer-read-only nil)
+	(mapcar (lambda (word-path)
+			  (with-current-buffer buf
+
+				(setq word-info (shengci-get-word-info word-path))
+				(setq word-info-explains (map-elt word-info 'explains))
+				(setq word-info-eng (map-elt word-info 'english))
+				(insert "英文: " word-info-eng "\n"
+						"记录时间: " (map-elt word-info 'start-time) "\n"
+						"音标: [" (map-elt word-info 'phonetic) "]\n"
+						"翻译:" "\n")
+				;; 插入翻译词条
+				(dotimes (i (length word-info-explains))
+				  (setq word (aref word-info-explains i))
+				  (when (not (null word))
+					(insert "\t" "- " word "\n")))
+				;; 插入按钮
+				(insert-button "朗读"
+							   'action (lambda (_) (youdao-dictionary--play-voice word-info-eng)
+										 (message "%s" word-info-eng))
+							   'follow-link t)
+				(insert "\t")
+				(insert-button "背熟"
+							   'action (lambda (_) (shengci-memorized-word word-info-eng))
+							   'follow-link t)
+				(insert "\n=====================================================================================================================" "\n\n")))
+			(shengci-get-all-recorded-word))
+	(setq buffer-read-only t)
+	(beginning-of-buffer)))
 )
 
 (provide 'shengci)
