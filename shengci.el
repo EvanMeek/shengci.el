@@ -1,7 +1,7 @@
+; -*- lexical-binding: t -*-
+
 ;;; shengci.el --- Record unfamiliar English words
-
 ;; Copyright (C) 2020 Evan Meek
-
 ;; Author: EvanMeek <the_lty_mail@foxmail.com>
 ;; Keywords: lisp
 ;; Version: 0.0.1
@@ -35,7 +35,10 @@
   :prefix 'shengci-)
 
 (defvar shengci-buffer-name "*shengci*" "The name of shengci buffer.")
-(defvar shengci-record-buffer-name "*shengci-record*" "The name of shengci-record buffer")
+
+(defvar shengci-record-buffer-name "*shengci-record*" "The name of shengci-record buffer.")
+
+(defvar shengci-memorized-buffer-name "*shengci-memorized*" "The name of shengci-memorized buffer.")
 
 (defcustom shengci-word-info nil
   "The info of word.
@@ -56,7 +59,7 @@ shengci插件的缓存目录路径"
   :group 'shengci)
 
 (defcustom shengci-cache-word-delete nil
-  "Word to be deleted
+  "Word to be deleted.
 将被删除掉的单词"
   :type 'string
   :group 'shengci)
@@ -115,6 +118,7 @@ shengci插件的缓存目录路径"
   (interactive)
   "capture new word and save to all recorded word cache file.
 捕获新的生词，并且保存到生词缓存文件中"
+  (shengci-check-path)
   (let* ((word-info (youdao-dictionary--request (thing-at-point 'word)))
 		 (word-eng (cdr (assoc 'query word-info)))
 		 (word-basic (cdr (assoc 'basic word-info)))
@@ -129,7 +133,7 @@ shengci插件的缓存目录路径"
 	
 	;; if word cache file not found, create it.
 	;; 如果word这个单词缓存文件不存在，则创建它。
-	(when (not (file-exists-p shengci-cache-word-file-path-format)) 
+	(when (not (file-exists-p shengci-cache-word-file-path-format))
 	  (f-write-text "" 'utf-8 shengci-cache-word-file-path-format))
 	
 	;; insert word info to cache file.
@@ -285,42 +289,69 @@ shengci插件的缓存目录路径"
 get word info"
   (json-read-file word-path))
 
-(defun show-record-word ()
-  "显示已记录单词"
-  (let ((buf (get-buffer-create shengci-record-buffer-name))
+(defun show-word (type)
+  "显示已记录或者是已背熟单词."
+  (when (symbolp type)
+	(setq type (symbol-name type))
+	(message "type:%s" type))
+  (let ((buf (get-buffer-create (cond ((string= type "memorized") shengci-memorized-buffer-name)
+									  ((string= type "recorded") shengci-record-buffer-name))))
 		word-info)
 	(pop-to-buffer buf)
-	(erase-buffer)
 	(setq buffer-read-only nil)
+	(erase-buffer)
 	(mapcar (lambda (word-path)
-			  (with-current-buffer buf
+			  (let* ((word-info (shengci-get-word-info word-path))
+					 (word-info-explains (map-elt word-info 'explains))
+					 (word-info-eng (map-elt word-info 'english)))
+				(with-current-buffer buf
+				  (insert "英文: " word-info-eng)
+				  (insert "\n"
+						  "记录时间: " (map-elt word-info 'start-time) "\n"
+						  "音标: [" (map-elt word-info 'phonetic) "]\n"
+						  "翻译:" "\n")
+				  ;; 插入翻译词条
+				  (dotimes (i (length word-info-explains))
+					(setq word (aref word-info-explains i))
+					(when (not (null word))
+					  (insert "\t" "- " word "\n")))
+				  ;; 插入按钮
+				  (insert-button "朗读"
+								 'action (lambda (_) (youdao-dictionary--play-voice word-info-eng))
+								 'follow-link t)
+				  (insert "\t")
+				  (cond ((string= type "recorded") (insert-button "背熟"
+																  'action (lambda (_)
+																			(shengci-memorized-word word-info-eng)
+																			(shengci-refresh-all-buffer-content))
+																  'follow-link t))
+						((string= type "memorized") (insert-button "重记"
+																   'action (lambda (_)
+																			 (shengci-re-record-word word-info-eng)
+																			 (shengci-refresh-all-buffer-content))
+																   'follow-lint t)))
+				  (insert "\t")
+				  (insert-button "删除"
+								 'action (lambda (_)
+										   (shengci-remove-word-forever word-info-eng)
+										   (cond ((string= type "memorized") (shengci-refresh-buffer-content))
+												 ((string= type "recorded") (shengci-refresh-buffer-content)))))
+				  (insert "\n=====================================================================================================================\n"))))
+			(cond ((string= type "memorized") (shengci-get-all-memorized-word))
+				  ((string= type "recorded") (shengci-get-all-recorded-word))))))
 
-				(setq word-info (shengci-get-word-info word-path))
-				(setq word-info-explains (map-elt word-info 'explains))
-				(setq word-info-eng (map-elt word-info 'english))
-				(insert "英文: " word-info-eng "\n"
-						"记录时间: " (map-elt word-info 'start-time) "\n"
-						"音标: [" (map-elt word-info 'phonetic) "]\n"
-						"翻译:" "\n")
-				;; 插入翻译词条
-				(dotimes (i (length word-info-explains))
-				  (setq word (aref word-info-explains i))
-				  (when (not (null word))
-					(insert "\t" "- " word "\n")))
-				;; 插入按钮
-				(insert-button "朗读"
-							   'action (lambda (_) (youdao-dictionary--play-voice word-info-eng)
-										 (message "%s" word-info-eng))
-							   'follow-link t)
-				(insert "\t")
-				(insert-button "背熟"
-							   'action (lambda (_) (shengci-memorized-word word-info-eng))
-							   'follow-link t)
-				(insert "\n=====================================================================================================================" "\n\n")))
-			(shengci-get-all-recorded-word))
-	(setq buffer-read-only t)
-	(beginning-of-buffer)))
+(defun refresh-buffer-content ()
+  "Refresh record buffer or memorzied buffer content."
+  (cond ((string= (buffer-name) shengci-record-buffer-name) 
+		 (shengci-show-word "recorded"))
+		((string= (buffer-name) shengci-memorized-buffer-name)
+		 (shengci-show-word "memorized"))))
+
+(defun refresh-all-buffer-content ()
+  "Refrsh record buffer and memorized buffer content."
+  (shengci-show-word "recorded")
+  (shengci-show-word "memorized"))
+
 )
-
 (provide 'shengci)
-;;; shengci.el ends here
+;;; shengci.el ends here.
