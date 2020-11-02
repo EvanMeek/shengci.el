@@ -114,12 +114,14 @@ shengci插件的缓存目录路径"
   (when (not (file-exists-p shengci-cache-memorized-word-file-path))
 	(f-write "" 'utf-8 shengci-cache-memorized-word-file-path)))
 
-(defun capture-word-and-save ()
+(defun capture-word-and-save (&optional word)
   (interactive)
   "capture new word and save to all recorded word cache file.
 捕获新的生词，并且保存到生词缓存文件中"
   (shengci-check-path)
-  (let* ((word-info (youdao-dictionary--request (thing-at-point 'word)))
+  (let* ((word-info (youdao-dictionary--request (if (null word)
+													(thing-at-point 'word)
+												  word)))
 		 (word-eng (cdr (assoc 'query word-info)))
 		 (word-basic (cdr (assoc 'basic word-info)))
 		 (word-phonetic (cdr (assoc 'us-phonetic word-basic)))
@@ -338,7 +340,9 @@ get word info"
 												 ((string= type "recorded") (shengci-refresh-buffer-content)))))
 				  (insert "\n=====================================================================================================================\n"))))
 			(cond ((string= type "memorized") (shengci-get-all-memorized-word))
-				  ((string= type "recorded") (shengci-get-all-recorded-word))))))
+				  ((string= type "recorded") (shengci-get-all-recorded-word))))
+	(setq buffer-read-only t)
+	(beginning-of-buffer)))
 
 (defun refresh-buffer-content ()
   "Refresh record buffer or memorzied buffer content."
@@ -352,6 +356,14 @@ get word info"
   (shengci-show-word "recorded")
   (shengci-show-word "memorized"))
 
+(defun show-recorded-word ()
+  (interactive)
+  (shengci-show-word "recorded"))
+
+(defun show-memorized-word ()
+  (interactive)
+  (shengci-show-word "memorzied"))
 )
+
 (provide 'shengci)
 ;;; shengci.el ends here.
