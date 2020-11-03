@@ -320,7 +320,7 @@ get word info"
 				  ;;     - adj. 骨骼的；骨瘦如柴的；概略的
 				  
 				  
- 				  (insert "_________________________ ")
+ 				  (insert "______________________ ")
 				  (insert-button word-info-eng
 								 'action (lambda (_)
 										   (setq word-info-insert (concat "记录时间: " (map-elt word-info 'start-time) "\n"
@@ -356,22 +356,22 @@ get word info"
 								 'follow-link t)
 				  (insert "\n")
 				  ;; 插入按钮
-				  (insert-button ""
+				  (insert-button "朗读"
 								 'action (lambda (_) (youdao-dictionary--play-voice word-info-eng))
 								 'follow-link t)
 				  (insert "\t")
-				  (cond ((string= type "recorded") (insert-button ""
+				  (cond ((string= type "recorded") (insert-button "背熟"
 																  'action (lambda (_)
 																			(shengci-memorized-word word-info-eng)
 																			(shengci-refresh-all-buffer-content))
 																  'follow-link t))
-						((string= type "memorized") (insert-button ""
+						((string= type "memorized") (insert-button "重记"
 																   'action (lambda (_)
 																			 (shengci-re-record-word word-info-eng)
 																			 (shengci-refresh-all-buffer-content))
 																   'follow-lint t)))
 				  (insert "\t")
-				  (insert-button ""
+				  (insert-button "删除"
 								 'action (lambda (_)
 										   (shengci-remove-word-forever word-info-eng)
 										   (cond ((string= type "memorized") (shengci-refresh-buffer-content))
