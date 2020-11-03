@@ -305,40 +305,78 @@ get word info"
 	(mapcar (lambda (word-path)
 			  (let* ((word-info (shengci-get-word-info word-path))
 					 (word-info-explains (map-elt word-info 'explains))
-					 (word-info-eng (map-elt word-info 'english)))
+					 (word-info-eng (map-elt word-info 'english))
+					 (word-info-insert-mark-beg)
+					 (word-info-insert-mark-end)
+					 (hide-state t))
 				(with-current-buffer buf
-				  (insert "英文: " word-info-eng)
-				  (insert "\n"
-						  "记录时间: " (map-elt word-info 'start-time) "\n"
-						  "音标: [" (map-elt word-info 'phonetic) "]\n"
-						  "翻译:" "\n")
-				  ;; 插入翻译词条
-				  (dotimes (i (length word-info-explains))
-					(setq word (aref word-info-explains i))
-					(when (not (null word))
-					  (insert "\t" "- " word "\n")))
+				  ;; Style Exmaple:
+				  ;; ==== Skeleton ====
+				  ;; 朗读    背熟    删除
+				  ;; 记录时间: Mon Nov  2 19:47:23 2020
+				  ;; 音标: [ˈskelɪtn]
+				  ;; 翻译:
+				  ;;     - n. 骨架，骨骼；纲要；骨瘦如柴的人
+				  ;;     - adj. 骨骼的；骨瘦如柴的；概略的
+				  
+				  
+ 				  (insert "_________________________ ")
+				  (insert-button word-info-eng
+								 'action (lambda (_)
+										   (setq word-info-insert (concat "记录时间: " (map-elt word-info 'start-time) "\n"
+																		  "音标: [" (map-elt word-info 'phonetic) "]\n"
+																		  "翻译:\n"
+																		  (mapconcat (lambda (word)
+																					   (concat "\t" "- " word))
+																					 word-info-explains
+																					 "\n")
+																		  "\n"))
+										   
+										   (setq buffer-read-only nil)
+										   ;; 如果当前是隐藏状态
+										   (if hide-state
+											   (progn
+												 (save-excursion
+												   (next-line)
+												   (next-line)
+												   (beginning-of-line)
+												   (setq word-info-insert-mark-beg (point-marker)
+														 word-info-insert-mark-end word-info-insert-mark-beg)
+												   (string-insert-rectangle (marker-position word-info-insert-mark-beg) (marker-position word-info-insert-mark-beg) word-info-insert))
+												 (setq hide-state nil
+													   word-info-insert-mark-end (point-marker)))
+											 
+											 (progn
+											   (save-excursion
+												 (replace-string  word-info-insert ""))
+											   (setq hide-state t
+													 word-info-insert-mark-end nil)))
+										   (setq buffer-read-only t))
+								 
+								 'follow-link t)
+				  (insert "\n")
 				  ;; 插入按钮
-				  (insert-button "朗读"
+				  (insert-button ""
 								 'action (lambda (_) (youdao-dictionary--play-voice word-info-eng))
 								 'follow-link t)
 				  (insert "\t")
-				  (cond ((string= type "recorded") (insert-button "背熟"
+				  (cond ((string= type "recorded") (insert-button ""
 																  'action (lambda (_)
 																			(shengci-memorized-word word-info-eng)
 																			(shengci-refresh-all-buffer-content))
 																  'follow-link t))
-						((string= type "memorized") (insert-button "重记"
+						((string= type "memorized") (insert-button ""
 																   'action (lambda (_)
 																			 (shengci-re-record-word word-info-eng)
 																			 (shengci-refresh-all-buffer-content))
 																   'follow-lint t)))
 				  (insert "\t")
-				  (insert-button "删除"
+				  (insert-button ""
 								 'action (lambda (_)
 										   (shengci-remove-word-forever word-info-eng)
 										   (cond ((string= type "memorized") (shengci-refresh-buffer-content))
-												 ((string= type "recorded") (shengci-refresh-buffer-content)))))
-				  (insert "\n=====================================================================================================================\n"))))
+												 ((string= type "recorded") (shengci-refresh-buffer-content))))) 
+				  (insert "\n"))))
 			(cond ((string= type "memorized") (shengci-get-all-memorized-word))
 				  ((string= type "recorded") (shengci-get-all-recorded-word))))
 	(setq buffer-read-only t)
@@ -357,12 +395,15 @@ get word info"
   (shengci-show-word "memorized"))
 
 (defun show-recorded-word ()
+  "Show all recorded-word , Does not contain memorized word."
   (interactive)
   (shengci-show-word "recorded"))
 
 (defun show-memorized-word ()
+  "Show all memorized word"
   (interactive)
   (shengci-show-word "memorzied"))
+
 )
 
 (provide 'shengci)
