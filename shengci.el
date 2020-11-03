@@ -21,9 +21,7 @@
 
 ;;; Code:
 (require 'json)
-(require 'request)
 (require 'cl-lib)
-(require 'pcase)
 (require 'async)
 (require 'youdao-dictionary)
 (require 'f)
@@ -294,8 +292,7 @@ get word info"
 (defun show-word (type)
   "显示已记录或者是已背熟单词."
   (when (symbolp type)
-	(setq type (symbol-name type))
-	(message "type:%s" type))
+	(setq type (symbol-name type)))
   (let ((buf (get-buffer-create (cond ((string= type "memorized") shengci-memorized-buffer-name)
 									  ((string= type "recorded") shengci-record-buffer-name))))
 		word-info)
@@ -303,80 +300,106 @@ get word info"
 	(setq buffer-read-only nil)
 	(erase-buffer)
 	(mapcar (lambda (word-path)
-			  (let* ((word-info (shengci-get-word-info word-path))
-					 (word-info-explains (map-elt word-info 'explains))
-					 (word-info-eng (map-elt word-info 'english))
-					 (word-info-insert-mark-beg)
-					 (word-info-insert-mark-end)
-					 (hide-state t))
-				(with-current-buffer buf
-				  ;; Style Exmaple:
-				  ;; ==== Skeleton ====
-				  ;; 朗读    背熟    删除
-				  ;; 记录时间: Mon Nov  2 19:47:23 2020
-				  ;; 音标: [ˈskelɪtn]
-				  ;; 翻译:
-				  ;;     - n. 骨架，骨骼；纲要；骨瘦如柴的人
-				  ;;     - adj. 骨骼的；骨瘦如柴的；概略的
+			  (when word-path
+				(let* ((word-info (shengci-get-word-info word-path))
+					   (word-info-explains (map-elt word-info 'explains))
+					   (word-info-eng (map-elt word-info 'english))
+					   (word-info-insert-mark-beg)
+					   (word-info-insert-mark-end)
+					   (hide-state t))
+				  (with-current-buffer buf
+					;; Style Exmaple:
+					;;                  signal                 
+					;; 		
+					;; 开始时间: Mon Nov  2 19:47:23 2020
+					;; 美式音标: [ˈsɪɡnəl]
+					;; 中文翻译:
+					;; 	- n. 信号；暗号；导火线
+					;; 	- vt. 标志；用信号通知；表示
+					;; 	- adj. 显著的；作为信号的
+					;; 	- vi. 发信号
+					;; 	- n. (Signal)人名；(瑞典)西格纳尔
 				  
-				  
- 				  (insert "______________________ ")
-				  (insert-button word-info-eng
-								 'action (lambda (_)
-										   (setq word-info-insert (concat "记录时间: " (map-elt word-info 'start-time) "\n"
-																		  "音标: [" (map-elt word-info 'phonetic) "]\n"
-																		  "翻译:\n"
-																		  (mapconcat (lambda (word)
-																					   (concat "\t" "- " word))
-																					 word-info-explains
-																					 "\n")
-																		  "\n"))
-										   
-										   (setq buffer-read-only nil)
-										   ;; 如果当前是隐藏状态
-										   (if hide-state
-											   (progn
-												 (save-excursion
-												   (next-line)
-												   (next-line)
-												   (beginning-of-line)
-												   (setq word-info-insert-mark-beg (point-marker)
-														 word-info-insert-mark-end word-info-insert-mark-beg)
-												   (string-insert-rectangle (marker-position word-info-insert-mark-beg) (marker-position word-info-insert-mark-beg) word-info-insert))
-												 (setq hide-state nil
-													   word-info-insert-mark-end (point-marker)))
+					(defun center-string (string size)
+					  (let* ((padding (/ (- size (length string)) 2))
+							 (lpad (+ (length string) padding))
+							 (lformat (format "%%%ds" lpad))
+							 (rformat (format "%%%ds" (- size))))
+						(format rformat (format lformat string))))
+					(insert-button
+					 ;; (concat
+					 ;;  (propertize "          " 'font-lock-face '(:underline t :overline t))
+					 ;;  (center-string word-info-eng 20)
+					 ;;  (propertize "          " 'font-lock-face '(:underline t :overline t)))
+					 (center-string word-info-eng (window-width))
+					 'face '('font-lock-face '(:underline "RoyalBlue1" :overline "RoyalBlue1" :foreground "MediumOrchid1"))
+					 'action (lambda (_)
+							   (setq word-info-insert
+									 (concat "开始时间: " (map-elt word-info 'start-time) "\n"
+											 "美式音标: [" (map-elt word-info 'phonetic) "]\n"
+											 "中文翻译:\n"
+											 (mapconcat (lambda (word)
+														  (concat "\t" "- " word))
+														word-info-explains
+														"\n")
+											 "\n"))
+							   (setq buffer-read-only nil)
+							   ;; 如果当前是隐藏状态
+							   (if hide-state
+								   (progn
+									 (save-excursion
+									   (next-line)
+									   (next-line)
+									   (beginning-of-line)
+									   (setq word-info-insert-mark-beg (point-marker)
+											 word-info-insert-mark-end word-info-insert-mark-beg)
+									   (string-insert-rectangle
+										(marker-position word-info-insert-mark-beg)
+										(marker-position word-info-insert-mark-beg)
+										word-info-insert))
+									 (setq hide-state nil
+										   word-info-insert-mark-end (point-marker)))
 											 
-											 (progn
-											   (save-excursion
-												 (replace-string  word-info-insert ""))
-											   (setq hide-state t
-													 word-info-insert-mark-end nil)))
-										   (setq buffer-read-only t))
+								 (progn
+								   (save-excursion
+									 (replace-string  word-info-insert ""))
+								   (setq hide-state t
+										 word-info-insert-mark-end nil)))
+							   (setq buffer-read-only t))
 								 
-								 'follow-link t)
-				  (insert "\n")
-				  ;; 插入按钮
-				  (insert-button "朗读"
-								 'action (lambda (_) (youdao-dictionary--play-voice word-info-eng))
-								 'follow-link t)
-				  (insert "\t")
-				  (cond ((string= type "recorded") (insert-button "背熟"
-																  'action (lambda (_)
-																			(shengci-memorized-word word-info-eng)
-																			(shengci-refresh-all-buffer-content))
-																  'follow-link t))
-						((string= type "memorized") (insert-button "重记"
-																   'action (lambda (_)
-																			 (shengci-re-record-word word-info-eng)
-																			 (shengci-refresh-all-buffer-content))
-																   'follow-lint t)))
-				  (insert "\t")
-				  (insert-button "删除"
-								 'action (lambda (_)
-										   (shengci-remove-word-forever word-info-eng)
-										   (cond ((string= type "memorized") (shengci-refresh-buffer-content))
-												 ((string= type "recorded") (shengci-refresh-buffer-content))))) 
-				  (insert "\n"))))
+					 'follow-link nil)
+					(insert "\n")
+					;; 插入按钮
+					(insert-button ""
+								   'help-echo "播放"
+								   'follow-link t
+								   'action (lambda (_) (youdao-dictionary--play-voice word-info-eng))
+								   'face '('font-lock-face '(:underline nil :foreground "green")))
+					(insert "\t")
+					(cond ((string= type "recorded") (insert-button ""
+																	'action (lambda (_)
+																			  (shengci-memorized-word word-info-eng)
+																			  (shengci-refresh-all-buffer-content))
+																	'follow-link t
+																	'help-echo "重记"
+																	'face '('font-lock-face '(:underline nil :foreground "coral")))
+						   )
+						  ((string= type "memorized") (insert-button ""
+																	 'action (lambda (_)
+																			   (shengci-re-record-word word-info-eng)
+																			   (shengci-refresh-all-buffer-content))
+																	 'follow-lint t
+																	 'help-echo "背熟"
+																	 'face '('font-lock-face '(:underline nil :foreground "coral")))))
+					(insert "\t")
+					(insert-button ""
+								   'action (lambda (_)
+											 (shengci-remove-word-forever word-info-eng)
+											 (cond ((string= type "memorized") (shengci-refresh-buffer-content))
+												   ((string= type "recorded") (shengci-refresh-buffer-content))))
+								   'help-echo "删除"
+								   'face '('font-lock-face '(:underline nil :foreground "VioletRed1")))
+					(insert "\n")))))
 			(cond ((string= type "memorized") (shengci-get-all-memorized-word))
 				  ((string= type "recorded") (shengci-get-all-recorded-word))))
 	(setq buffer-read-only t)
@@ -402,8 +425,7 @@ get word info"
 (defun show-memorized-word ()
   "Show all memorized word"
   (interactive)
-  (shengci-show-word "memorzied"))
-
+  (shengci-show-word "memorized"))
 )
 
 (provide 'shengci)
