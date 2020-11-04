@@ -332,7 +332,7 @@ get word info"
 					 ;;  (center-string word-info-eng 20)
 					 ;;  (propertize "          " 'font-lock-face '(:underline t :overline t)))
 					 (center-string word-info-eng (window-width))
-					 'face '('font-lock-face '(:underline "RoyalBlue1" :overline "RoyalBlue1" :foreground "MediumOrchid1"))
+					 'face (list :underline "RoyalBlue1" :overline "RoyalBlue1" :foreground "MediumOrchid1")
 					 'action (lambda (_)
 							   (setq word-info-insert
 									 (concat "开始时间: " (map-elt word-info 'start-time) "\n"
@@ -374,7 +374,7 @@ get word info"
 								   'help-echo "播放"
 								   'follow-link t
 								   'action (lambda (_) (youdao-dictionary--play-voice word-info-eng))
-								   'face '('font-lock-face '(:underline nil :foreground "green")))
+								   'face (list :underline nil :foreground "green"))
 					(insert "\t")
 					(cond ((string= type "recorded") (insert-button ""
 																	'action (lambda (_)
@@ -382,7 +382,7 @@ get word info"
 																			  (shengci-refresh-all-buffer-content))
 																	'follow-link t
 																	'help-echo "重记"
-																	'face '('font-lock-face '(:underline nil :foreground "coral")))
+																	'face (list :underline nil :foreground "coral"))
 						   )
 						  ((string= type "memorized") (insert-button ""
 																	 'action (lambda (_)
@@ -390,15 +390,15 @@ get word info"
 																			   (shengci-refresh-all-buffer-content))
 																	 'follow-lint t
 																	 'help-echo "背熟"
-																	 'face '('font-lock-face '(:underline nil :foreground "coral")))))
+																	 'face (list :underline nil :foreground "coral"))))
 					(insert "\t")
 					(insert-button ""
 								   'action (lambda (_)
 											 (shengci-remove-word-forever word-info-eng)
 											 (cond ((string= type "memorized") (shengci-refresh-buffer-content))
 												   ((string= type "recorded") (shengci-refresh-buffer-content))))
-								   'help-echo "删除"
-								   'face '('font-lock-face '(:underline nil :foreground "VioletRed1")))
+								   ;; 'help-echo "删除"
+								   'face '('font-lock-warning-face :underline nil :foreground "VioletRed1"))
 					(insert "\n")))))
 			(cond ((string= type "memorized") (shengci-get-all-memorized-word))
 				  ((string= type "recorded") (shengci-get-all-recorded-word))))
