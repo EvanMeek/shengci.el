@@ -29,9 +29,17 @@
 
 (defvar shengci-buffer-name "*shengci*" "The name of shengci buffer.")
 
+(defvar shengci-guess-word-buffer-name "*shengci-guess-word*" "The name of write word form memory buffer.")
+
 (defvar shengci-record-buffer-name "*shengci-record*" "The name of shengci-record buffer.")
 
 (defvar shengci-memorized-buffer-name "*shengci-memorized*" "The name of shengci-memorized buffer.")
+
+;; 所有单词的哈系表集合。
+(defvar shengci-all-words-hash-table nil "All word cache information. Hash Table")
+
+;; 猜单词的成绩，数据例子: (单词A 1 单词B 0 单词C 1)，其中value为1代表正确，0代表错误。
+(defvar shengci-guess-word-score (make-hash-table :test 'equal) "The socre for guess word game.")
 
 (defcustom shengci-word-info nil
   "The info of word.
@@ -111,7 +119,7 @@ if not found, create they.
 
 ;;;###autoload
 (defun capture-word-and-save (&optional word)
-    "Capture new word and save to all recorded word cache file.
+  "Capture new word and save to all recorded word cache file.
 捕获新的生词，并且保存到生词缓存文件中
 WORD 要保存的单词"
   (interactive)
@@ -401,8 +409,7 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
                                                                               (shengci-refresh-all-buffer-content))
                                                                     'follow-link t
                                                                     'help-echo "重记"
-                                                                    'face (list :underline nil :foreground "coral"))
-                           )
+                                                                    'face (list :underline nil :foreground "coral")))
                           ((string= type "memorized") (insert-button ""
                                                                      'action (lambda (_)
                                                                                (shengci-re-record-word word-info-eng)
@@ -449,7 +456,76 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
 (defun show-memorized-word ()
   "Show all memorized word."
   (interactive)
-  (shengci-show-word "memorized")))
+  (shengci-show-word "memorized"))
+
+;;;###autoload
+(defun -set-all-word ()
+  "Set all word hash table.
+设置单词哈系表"
+  (let ((all-cache-words (json-read-file shengci-cache-word-file-path)))
+    (setq shengci-all-words-hash-table (make-hash-table :test 'equal))
+    (mapcar (lambda (word)
+              (when (string= (map-elt (json-read-file (cdr word)) 'end-time) "null")
+                (puthash (car word) (cdr word) shengci-all-words-hash-table)))
+            all-cache-words)
+    shengci-all-words-hash-table))
+
+;;;###autoload
+(defun -insert-score ()
+  "Insert the score.
+插入成绩"
+  (let ((true 0)
+        (false 0))
+    (maphash (lambda (key value)
+               (if (string= value "1")
+                   (setq true (1+ true))
+                 (setq false (1+ false))))
+             shengci-guess-word-score)
+    (insert "正确: " (number-to-string true) "\t" "错误: " (number-to-string false))))
+
+;;;###autoload
+(defun practice-guess-word ()
+  "Practice write word from memory.
+练习默写单词。"
+  (interactive)
+  (shengci--set-all-word)
+  (let ((buf (get-buffer-create shengci-guess-word-buffer-name))
+        (ovs nil))
+    (pop-to-buffer buf)
+    (setq shengci-guess-word-score nil
+          shengci-guess-word-score (make-hash-table :test 'equal))
+    (with-current-buffer buf
+      (maphash (lambda (key value)
+                 (erase-buffer)
+                 (shengci--insert-score)
+                 (let* ((word-info (json-read-file value))
+                        (word-info-eng (map-elt word-info 'english))
+                        (word-info-explains (map-elt word-info 'explains))
+                        (beg)
+                        (end)
+                        (ov))
+                   (insert "\n")
+                   (setq beg (point))
+                   (insert word-info-eng "\n")
+                   (setq end (point))
+                   (message "beg: %s ::: end: %s" beg end)
+                   (mapcar (lambda (word)
+                             (insert "\t" "- " word "\n"))
+                           word-info-explains)
+                   ;; 隐藏word-info-eng部分单词
+                   (dotimes (i (length word-info-eng))
+                     ;; 算法是隔两个字母隐藏一个字母
+                     (when (= (% i 3) 1)
+                       (progn
+                         (setq ov (make-overlay (+ beg i) (1+ (+ beg i))))
+                         (overlay-put ov 'face '(:underline t))
+                         (overlay-put ov 'display (make-string 1 ?\s))
+                         (push ov ovs))))
+                   (if (string= key (read-string "英文(C-g取消练习): "))
+                       (puthash key "1" shengci-guess-word-score)
+                     (puthash key "0" shengci-guess-word-score)))) 
+               shengci-all-words-hash-table))))
+)
 
 (provide 'shengci)
 ;;; shengci.el ends here
