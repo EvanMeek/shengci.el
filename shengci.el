@@ -123,7 +123,6 @@ if not found, create they.
 捕获新的生词，并且保存到生词缓存文件中
 WORD 要保存的单词"
   (interactive)
-
   (shengci--check-path)
   (let* ((word-info (youdao-dictionary--request (if (null word)
                                                     (thing-at-point 'word)
@@ -318,6 +317,7 @@ means to display the recorded words.
 
 TYPE的值应该是memorized或recoreded符号或字符串。
 memorized意味着显示显示已背熟单词，recored意味显示已记录单词."
+  (shengci--check-path)
   ;; 当type是符号时转换
   (when (symbolp type)
     (setq type (symbol-name type)))
@@ -488,6 +488,7 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
   "Practice write word from memory.
 练习默写单词。"
   (interactive)
+  (shengci--check-path)
   (shengci--set-all-word)
   (let ((buf (get-buffer-create shengci-guess-word-buffer-name))
         (ovs nil))
