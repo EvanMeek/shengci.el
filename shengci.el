@@ -486,7 +486,7 @@ The value of TYPE should be memorized or recorded
     (mapcar (lambda (word)
               (cond ((string= type "memorized") (when (not (string= (map-elt (json-read-file (cdr word)) 'end-time) "null"))
                                                   (puthash (car word) (cdr word) shengci-temp-words-hash-table))) 
-                    ((string= type "recoreded") (when (string= (map-elt (json-read-file (cdr word)) 'end-time) "null")
+                    ((string= type "recorded") (when (string= (map-elt (json-read-file (cdr word)) 'end-time) "null")
                                                   (puthash (car word) (cdr word) shengci-temp-words-hash-table)))))
             all-cache-words)))
 
