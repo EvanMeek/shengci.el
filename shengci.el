@@ -29,7 +29,9 @@
 
 (defvar shengci-buffer-name "*shengci*" "The name of shengci buffer.")
 
-(defvar shengci-guess-word-buffer-name "*shengci-guess-word*" "The name of write word form memory buffer.")
+(defvar shengci-guess-recorded-word-buffer-name "*shengci-guess-recorded-word*" "The name of write recorded word form memory buffer.")
+
+(defvar shengci-guess-memorized-word-buffer-name "*shengci-guess-memorized-word*" "The name of write memorized word form memory buffer.")
 
 (defvar shengci-record-buffer-name "*shengci-record*" "The name of shengci-record buffer.")
 
@@ -141,28 +143,27 @@ WORD 要保存的单词"
     ;; if word cache file not found, create it.
     ;; 如果word这个单词缓存文件不存在，则创建它。
     (when (not (file-exists-p shengci-cache-word-file-path-format))
-      (f-write-text "" 'utf-8 shengci-cache-word-file-path-format))
+      (f-write-text "" 'utf-8 shengci-cache-word-file-path-format)
+      ;; insert word info to cache file.
+      ;; 插入单词信息到缓存文件中。
+      (f-append-text (concat "{\n"
+                             "\"english\" : \"" word-eng "\",\n"
+                             "\"start-time\" : \"" (current-time-string) "\",\n"
+                             "\"end-time\" : \"" (json-encode nil) "\",\n"
+                             "\"phonetic\" : \"" word-phonetic "\",\n"
+                             "\"explains\" : " (json-encode-array word-explains)  "\n"
+                             "}\n") 'utf-8 shengci-cache-word-file-path-format)
 
-    ;; insert word info to cache file.
-    ;; 插入单词信息到缓存文件中。
-    (f-append-text (concat "{\n"
-                           "\"english\" : \"" word-eng "\",\n"
-                           "\"start-time\" : \"" (current-time-string) "\",\n"
-                           "\"end-time\" : \"" (json-encode nil) "\",\n"
-                           "\"phonetic\" : \"" word-phonetic "\",\n"
-                           "\"explains\" : " (json-encode-array word-explains)  "\n"
-                           "}\n") 'utf-8 shengci-cache-word-file-path-format)
+      ;; delete shengci-cache-word-file-path's content
+      ;; 删除shengci-cache-word-file-path的内容
+      (with-temp-file shengci-cache-word-file-path
+        (mark-whole-buffer)
+        (delete-active-region))
 
-    ;; delete shengci-cache-word-file-path's content
-    ;; 删除shengci-cache-word-file-path的内容
-    (with-temp-file shengci-cache-word-file-path
-      (mark-whole-buffer)
-      (delete-active-region))
-
-    ;; Add the current file path to the total word cache file
-    ;; 添加当前文件路径到所有单词缓存文件中。
-    (f-append-text (json-serialize
-                    (json-add-to-object all-words-cache word-eng shengci-cache-word-file-path-format)) 'utf-8 shengci-cache-word-file-path)))
+      ;; Add the current file path to the total word cache file
+      ;; 添加当前文件路径到所有单词缓存文件中。
+      (f-append-text (json-serialize
+                      (json-add-to-object all-words-cache word-eng shengci-cache-word-file-path-format)) 'utf-8 shengci-cache-word-file-path))))
 ;;;###autoload
 (defun remove-word-forever (word)
   "Delete a recorded or memorized word forever.
@@ -226,7 +227,15 @@ WORD 要跟改为背熟的单词."
       ;; Second, reset the end-time object of the word to the current time
       ;; 其次将单词的 end-time 对象重置为当前时间
       (map-put! cache-word-json-data 'end-time (current-time-string))
-
+      
+      ;; Initialize the last review time to nil
+      ;; 初始化上次复习时间为null
+      (map-put cache-word-json-data 'review-time "null")
+      
+      ;; 初始化复习等级为0
+      ;; Initialize the last review time to nil
+      (map-put cache-word-json-data 'review-level 0)
+      
       ;; Re-add the modified data to the remembered word cache file
       ;; 将修改好的数据重新加入到已记住单词缓存文件中
       (f-append-text (json-serialize cache-word-json-data) 'utf-8 memorized-word-file-path)
@@ -359,7 +368,7 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
                      'face (list :underline "RoyalBlue1" :overline "RoyalBlue1" :foreground "MediumOrchid1")
                      'action (lambda (_)
                                (setq word-info-insert
-                                     (concat "开始时间: " (map-elt word-info 'start-time) "\n"
+                                     (concat "加入时间: " (map-elt word-info 'start-time) "\n"
                                              "美式音标: [" (map-elt word-info 'phonetic) "]\n"
                                              "中文翻译:\n"
                                              (mapconcat (lambda (word)
@@ -397,20 +406,20 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
                      'follow-link nil)
                     (insert "\n")
                     ;; 插入按钮
-                    (insert-button ""
+                    (insert-button "朗读"
                                    'help-echo "播放"
                                    'follow-link t
                                    'action (lambda (_) (youdao-dictionary--play-voice word-info-eng))
                                    'face (list :underline nil :foreground "green"))
                     (insert "\t")
-                    (cond ((string= type "recorded") (insert-button ""
+                    (cond ((string= type "recorded") (insert-button "重记"
                                                                     'action (lambda (_)
                                                                               (shengci--memorized-word word-info-eng)
                                                                               (shengci-refresh-all-buffer-content))
                                                                     'follow-link t
                                                                     'help-echo "重记"
                                                                     'face (list :underline nil :foreground "coral")))
-                          ((string= type "memorized") (insert-button ""
+                          ((string= type "memorized") (insert-button "背熟"
                                                                      'action (lambda (_)
                                                                                (shengci-re-record-word word-info-eng)
                                                                                (shengci-refresh-all-buffer-content))
@@ -418,7 +427,7 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
                                                                      'help-echo "背熟"
                                                                      'face (list :underline nil :foreground "coral"))))
                     (insert "\t")
-                    (insert-button ""
+                    (insert-button "删除"
                                    'action (lambda (_)
                                              (shengci-remove-word-forever word-info-eng)
                                              (cond ((string= type "memorized") (shengci-refresh-buffer-content))
@@ -484,13 +493,13 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
     (insert "正确: " (number-to-string true) "\t" "错误: " (number-to-string false))))
 
 ;;;###autoload
-(defun practice-guess-word ()
-  "Practice write word from memory.
-练习默写单词。"
+(defun practice-guess-recorded-word ()
+  "Practice write recorded word from memory.
+练习默写已记录单词。"
   (interactive)
   (shengci--check-path)
   (shengci--set-all-word)
-  (let ((buf (get-buffer-create shengci-guess-word-buffer-name))
+  (let ((buf (get-buffer-create shengci-guess-recorded-word-buffer-name))
         (ovs nil))
     (pop-to-buffer buf)
     (setq shengci-guess-word-score nil
@@ -523,9 +532,33 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
                          (overlay-put ov 'display (make-string 1 ?\s))
                          (push ov ovs))))
                    (if (string= key (read-string "英文(C-g取消练习): "))
-                       (puthash key "1" shengci-guess-word-score)
+                       (progn
+                         ;; 将单词设置为已背熟
+                         (shengci--memorized-word key)
+                         (puthash key "1" shengci-guess-word-score))
                      (puthash key "0" shengci-guess-word-score)))) 
                shengci-all-words-hash-table))))
+(defun practice-guess-memorized-word ()
+  "Practice write memorized word from memory.
+练习默写已背熟的单词.
+"
+  (interactive)
+  (shengci--check-path)
+  (shengci--set-all-word)
+  (let* ((buf (get-buffer-create shengci-guess-memorized-word-buffer-name))
+         (level-lst (list "0 - 从未复习过" "1 - 20分钟前复习过" "2 - 1小时前复习过" "3 - 9小时前复习过" "4 - 1天前复习过" "5 - 两天前复习过" "6 - 6天前复习过"))
+         (level (string-to-number (completing-read "请选择复习等级: " level-lst))))
+    (pop-to-buffer buf)
+    (cond ((when (= level 0)) (progn ))
+          (maphash (lambda (key val)
+                     (unless (string= (map-elt (json-read-file val) 'end-time) "null")
+                       
+                       )
+                     )
+                   shengci-all-words-hash-table)
+          )
+    )
+  )
 )
 
 (provide 'shengci)
