@@ -37,8 +37,8 @@
 
 (defvar shengci-memorized-buffer-name "*shengci-memorized*" "The name of shengci-memorized buffer.")
 
-;; 所有单词的哈系表集合。
-(defvar shengci-all-words-hash-table nil "All word cache information. Hash Table")
+;; 临时单词的哈系表集合。
+(defvar shengci-temp-words-hash-table nil "Temp words cache information. Hash Table")
 
 ;; 猜单词的成绩，数据例子: (单词A 1 单词B 0 单词C 1)，其中value为1代表正确，0代表错误。
 (defvar shengci-guess-word-score (make-hash-table :test 'equal) "The socre for guess word game.")
@@ -270,6 +270,10 @@ WORD 要重记的单词。"
 
       ;; 处理单词end-time
       (map-put! word-json-data 'end-time "null")
+      ;; 处理单词review-time
+      (setq word-json-data (map-delete word-json-data 'review-time))
+      ;; 处理单词review-level
+      (setq word-json-data (map-delete word-json-data 'review-level)) 
       (f-write-text (json-serialize word-json-data) 'utf-8 (concat shengci-cache-word-dir-path word "-cache.json")))))
 
 ;;;###autoload
@@ -468,16 +472,23 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
   (shengci-show-word "memorized"))
 
 ;;;###autoload
-(defun -set-all-word ()
+(defun -set-all-word (type)
   "Set all word hash table.
-设置单词哈系表"
+设置单词哈系表。
+The value of TYPE should be memorized or recorded
+"
+  ;; 如果type是一个符号，将其转换为string
+  (when (symbolp type)
+    (setq type (symbol-name type)))
   (let ((all-cache-words (json-read-file shengci-cache-word-file-path)))
-    (setq shengci-all-words-hash-table (make-hash-table :test 'equal))
+    (setq shengci-temp-words-hash-table nil)
+    (setq shengci-temp-words-hash-table (make-hash-table :test 'equal))
     (mapcar (lambda (word)
-              (when (string= (map-elt (json-read-file (cdr word)) 'end-time) "null")
-                (puthash (car word) (cdr word) shengci-all-words-hash-table)))
-            all-cache-words)
-    shengci-all-words-hash-table))
+              (cond ((string= type "memorized") (when (not (string= (map-elt (json-read-file (cdr word)) 'end-time) "null"))
+                                                  (puthash (car word) (cdr word) shengci-temp-words-hash-table))) 
+                    ((string= type "recoreded") (when (string= (map-elt (json-read-file (cdr word)) 'end-time) "null")
+                                                  (puthash (car word) (cdr word) shengci-temp-words-hash-table)))))
+            all-cache-words)))
 
 ;;;###autoload
 (defun -insert-score ()
@@ -492,74 +503,171 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
              shengci-guess-word-score)
     (insert "正确: " (number-to-string true) "\t" "错误: " (number-to-string false))))
 
+
+;;;###autoload
+(defun -guess-word-main (hash-table type &optional level)
+  (when (symbolp type)
+    (setq type (symbol-name type)))
+  (setq ovs nil)
+  (maphash (lambda (key value)
+             (erase-buffer)
+             (shengci--insert-score)
+             (let* ((word-info (json-read-file value))
+                    (word-info-eng (map-elt word-info 'english))
+                    (word-info-explains (map-elt word-info 'explains))
+                    (beg)
+                    (end)
+                    (ov))
+               (insert "\n")
+               (setq beg (point))
+               (insert word-info-eng "\n")
+               (setq end (point))
+               (message "beg: %s ::: end: %s" beg end)
+               (mapcar (lambda (word)
+                         (insert "\t" "- " word "\n"))
+                       word-info-explains)
+               ;; 隐藏word-info-eng部分单词
+               (dotimes (i (length word-info-eng))
+                 ;; 算法是隔两个字母隐藏一个字母
+                 (when (= (% i 3) 1)
+                   (progn
+                     (setq ov (make-overlay (+ beg i) (1+ (+ beg i))))
+                     (overlay-put ov 'face '(:underline t))
+                     (overlay-put ov 'display (make-string 1 ?\s))
+                     (push ov ovs))))
+               (if (string= key (read-string "英文(C-g取消练习): "))
+                   (progn
+                     ;; 将单词设置为已背熟
+                     (cond ((string= type "recorded") (shengci--memorized-word key))
+                           ((string= type "memorized") (let ((word-cache (json-read-file value)))
+                                                         (with-temp-file value
+                                                           (call-interactively #'mark-whole-buffer)
+                                                           (delete-active-region)
+                                                           (save-buffer))
+                                                         (when (not (= level (1+ level)))
+                                                           (map-put! word-cache 'review-level (1+ level)))
+                                                         (f-append-text (json-serialize word-cache) 'utf-8 value))))
+                     (puthash key "1" shengci-guess-word-score))
+                 (puthash key "0" shengci-guess-word-score)))) 
+           hash-table))
+
 ;;;###autoload
 (defun practice-guess-recorded-word ()
   "Practice write recorded word from memory.
 练习默写已记录单词。"
   (interactive)
   (shengci--check-path)
-  (shengci--set-all-word)
-  (let ((buf (get-buffer-create shengci-guess-recorded-word-buffer-name))
-        (ovs nil))
+  (shengci--set-all-word "recorded")
+  (let ((buf (get-buffer-create shengci-guess-recorded-word-buffer-name)))
     (pop-to-buffer buf)
     (setq shengci-guess-word-score nil
           shengci-guess-word-score (make-hash-table :test 'equal))
     (with-current-buffer buf
-      (maphash (lambda (key value)
-                 (erase-buffer)
-                 (shengci--insert-score)
-                 (let* ((word-info (json-read-file value))
-                        (word-info-eng (map-elt word-info 'english))
-                        (word-info-explains (map-elt word-info 'explains))
-                        (beg)
-                        (end)
-                        (ov))
-                   (insert "\n")
-                   (setq beg (point))
-                   (insert word-info-eng "\n")
-                   (setq end (point))
-                   (message "beg: %s ::: end: %s" beg end)
-                   (mapcar (lambda (word)
-                             (insert "\t" "- " word "\n"))
-                           word-info-explains)
-                   ;; 隐藏word-info-eng部分单词
-                   (dotimes (i (length word-info-eng))
-                     ;; 算法是隔两个字母隐藏一个字母
-                     (when (= (% i 3) 1)
-                       (progn
-                         (setq ov (make-overlay (+ beg i) (1+ (+ beg i))))
-                         (overlay-put ov 'face '(:underline t))
-                         (overlay-put ov 'display (make-string 1 ?\s))
-                         (push ov ovs))))
-                   (if (string= key (read-string "英文(C-g取消练习): "))
-                       (progn
-                         ;; 将单词设置为已背熟
-                         (shengci--memorized-word key)
-                         (puthash key "1" shengci-guess-word-score))
-                     (puthash key "0" shengci-guess-word-score)))) 
-               shengci-all-words-hash-table))))
+      (shengci--guess-word-main shengci-temp-words-hash-table "recorded"))))
+
+;;;###autoload
 (defun practice-guess-memorized-word ()
   "Practice write memorized word from memory.
-练习默写已背熟的单词.
-"
+练习默写已背熟的单词."
   (interactive)
   (shengci--check-path)
-  (shengci--set-all-word)
+  (shengci--set-all-word "memorized")
   (let* ((buf (get-buffer-create shengci-guess-memorized-word-buffer-name))
-         (level-lst (list "0 - 从未复习过" "1 - 20分钟前复习过" "2 - 1小时前复习过" "3 - 9小时前复习过" "4 - 1天前复习过" "5 - 两天前复习过" "6 - 6天前复习过"))
-         (level (string-to-number (completing-read "请选择复习等级: " level-lst))))
+         (level-lst (list "0 - 从未复习过" "1 - 二十分钟前复习过" "2 - 一小时前复习过" "3 - 九小时前复习过" "4 - 一天前复习过" "5 - 两天前复习过" "6 - 六天前复习过"))
+         (level (string-to-number (completing-read "请选择复习等级: " level-lst)))
+         (guess-memorized-word-hash-table (make-hash-table :test 'equal)))
     (pop-to-buffer buf)
-    (cond ((when (= level 0)) (progn ))
-          (maphash (lambda (key val)
-                     (unless (string= (map-elt (json-read-file val) 'end-time) "null")
-                       
-                       )
-                     )
-                   shengci-all-words-hash-table)
-          )
-    )
-  )
-)
+    (cond
+     ;; 当level为0，需要过滤review-time为null的单词
+     ((= level 0) (maphash (lambda (key val)
+                             ;; 从未复习过
+                             (when (string= (map-elt (json-read-file val) 'review-time) "null")
+                               (puthash key val guess-memorized-word-hash-table)))
+                           shengci-temp-words-hash-table))
+     ((= level 1) (maphash (lambda (key val)
+                             (let* ((word-info (json-read-file val))
+                                    (word-review-time (map-elt word-info 'review-time))
+                                    (time-interval (time-subtract
+                                                    (time-convert (current-time) 'integer)
+                                                    (time-convert (if (string= word-review-time "null")
+                                                                      (current-time)
+                                                                    (date-to-time word-review-time)) 'integer))))
+                               
+                               ;; 20小时~1小时之间前复习过
+                               (when (and (>= time-interval 1)
+                                          (< time-interval (* 20 60)))
+                                 (puthash key val guess-memorized-word-hash-table))))
+                           shengci-temp-words-hash-table))
+     ((= level 2) (maphash (lambda (key val)
+                             (let* ((word-info (json-read-file val))
+                                    (word-review-time (map-elt word-info 'review-time))
+                                    (time-interval (time-subtract
+                                                    (time-convert (current-time) 'integer)
+                                                    (time-convert (if (string= word-review-time "null")
+                                                                      (current-time)
+                                                                    (date-to-time word-review-time)) 'integer))))
+                               ;; 1小时~9小时之间前复习过
+                               (when (and (>= time-interval (* 60 60))
+                                          (< time-interval (* (* 60 60) 9)))
+                                 (puthash key val guess-memorized-word-hash-table))))
+                           shengci-temp-words-hash-table))
+     ((= level 3) (maphash (lambda (key val)
+                             (let* ((word-info (json-read-file val))
+                                    (word-review-time (map-elt word-info 'review-time))
+                                    (time-interval (time-subtract
+                                                    (time-convert (current-time) 'integer)
+                                                    (time-convert (if (string= word-review-time "null")
+                                                                      (current-time)
+                                                                    (date-to-time word-review-time)) 'integer))))
+                               ;; 9小时~一天之间前复习过
+                               (when (and (>= time-interval (* (* 60 60) 9))
+                                          (< time-interval (* (* 60 60) 24)))
+                                 (puthash key val guess-memorized-word-hash-table))))
+                           shengci-temp-words-hash-table))
+     ((= level 4) (maphash (lambda (key val)
+                             (let* ((word-info (json-read-file val))
+                                    (word-review-time (map-elt word-info 'review-time))
+                                    (time-interval (time-subtract
+                                                    (time-convert (current-time) 'integer)
+                                                    (time-convert (if (string= word-review-time "null")
+                                                                      (current-time)
+                                                                    (date-to-time word-review-time)) 'integer))))
+                               ;; 一天~两天之间前复习过
+                               (when (and (>= time-interval (* (* 60 60) 24))
+                                          (< time-interval (* (* (* 60 60) 24) 2)))
+                                 (puthash key val guess-memorized-word-hash-table))))
+                           shengci-temp-words-hash-table))
+     ((= level 5) (maphash (lambda (key val)
+                             (let* ((word-info (json-read-file val))
+                                    (word-review-time (map-elt word-info 'review-time))
+                                    (time-interval (time-subtract
+                                                    (time-convert (current-time) 'integer)
+                                                    (time-convert (if (string= word-review-time "null")
+                                                                      (current-time)
+                                                                    (date-to-time word-review-time)) 'integer))))
+                               ;; 两天~六天之间前复习过
+                               (when (and (>= time-interval (* (* (* 60 60) 24) 2))
+                                          (< time-interval (* (* (* 60 60) 24) 6)))
+                                 (puthash key val guess-memorized-word-hash-table))))
+                           shengci-temp-words-hash-table))
+
+     ((= level 6) (maphash (lambda (key val)
+                             (let* ((word-info (json-read-file val))
+                                    (word-review-time (map-elt word-info 'review-time))
+                                    (time-interval (time-subtract
+                                                    (time-convert (current-time) 'integer)
+                                                    (time-convert (if (string= word-review-time "null")
+                                                                      (current-time)
+                                                                    (date-to-time word-review-time)) 'integer))))
+                               ;; 大于六天前复习过的
+                               (when (>= time-interval (* (* (* 60 60) 24) 6))
+                                 (puthash key val guess-memorized-word-hash-table))))
+                           shengci-temp-words-hash-table)))
+    (setq shengci-guess-word-score nil
+          shengci-guess-word-score (make-hash-table :test 'equal))
+    (with-current-buffer buf
+      (shengci--guess-word-main guess-memorized-word-hash-table "memorized" level)
+      ))))
 
 (provide 'shengci)
 ;;; shengci.el ends here

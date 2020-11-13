@@ -16,7 +16,7 @@
 ** 使用
    * 捕获生词
 
-	 将光标放在一个单词上，键入 ~M-x shengci-capture-word-and-save~
+	 将光标放在一个单词上，键入 ~M-x shengci-capture-word-and-save~ 。
 
    * 查看所有已记录单词(不包括已背熟的单词)
 
@@ -27,15 +27,19 @@
 	 键入 ~M-x shengci-memorized-word~
 
    * 猜单词游戏
-     键入 ~M-x shengci-practice-guess-word~
+
+     键入 ~M-x shengci-practice-recorded-guess-word~ ，进行猜已记录单词游戏。
+
+     键入 ~M-x shengci-practice-memorized-guess-word~ ，进行猜已背熟单词游戏。
 * 其他
   有任何问题可以给我提交Issue.本人正在尝试将其整合成一个能上传至mepla的插件。
 * 感谢
   猜单词功能灵感来自[[https://github.com/Qquanwei/emacs-guess-word-game][emacs-guess-word-game]]
 * TODO
-  | 简介   | 功能                           | 进度   |
-  |--------+--------------------------------+--------|
-  | 猜单词 | 用户根据中文翻译输入对应的英文 | 已实现 |
+  | 简介     | 功能                           | 进度   |
+  |----------+--------------------------------+--------|
+  | 猜单词   | 用户根据中文翻译输入对应的英文 | 已实现 |
+  | 复习算法 | 对单词复习引入一定算法         | 已实现 |
 
   
 
