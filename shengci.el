@@ -3,7 +3,7 @@
 ;; Copyright (C) 2020 Evan Meek
 ;; Author: EvanMeek <the_lty_mail@foxmail.com>
 ;; Keywords: lisp
-;; Version: 0.0.1
+;; Version: 1.0.0
 ;; Package-Requires: ((emacs "26.0") (youdao-dictionary "0.4") (f "0.20.0") )
 ;; License: GPL-3.0
 ;; Repository: https://github.com/EvanMeek/shengci.el
@@ -598,8 +598,8 @@ The value of TYPE should be memorized or recorded
                                                                       (current-time)
                                                                     (date-to-time word-review-time)) 'integer))))
                                ;; 20分钟~1小时之间前复习过
-                               (when (and (>= time-interval 1)
-                                          (< time-interval (* 20 60)))
+                               (when (and (>= time-interval (* 20 60))
+                                          (< time-interval (* 60 60)))
                                  (message "20分钟~1小时")
                                  (puthash key val guess-memorized-word-hash-table))))
                            shengci-temp-words-hash-table))
