@@ -416,14 +416,14 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
                                    'action (lambda (_) (youdao-dictionary--play-voice word-info-eng))
                                    'face (list :underline nil :foreground "green"))
                     (insert "\t")
-                    (cond ((string= type "recorded") (insert-button "重记"
+                    (cond ((string= type "recorded") (insert-button "背熟"
                                                                     'action (lambda (_)
                                                                               (shengci--memorized-word word-info-eng)
                                                                               (shengci-refresh-all-buffer-content))
                                                                     'follow-link t
                                                                     'help-echo "重记"
                                                                     'face (list :underline nil :foreground "coral")))
-                          ((string= type "memorized") (insert-button "背熟"
+                          ((string= type "memorized") (insert-button "重记"
                                                                      'action (lambda (_)
                                                                                (shengci-re-record-word word-info-eng)
                                                                                (shengci-refresh-all-buffer-content))
@@ -544,8 +544,10 @@ The value of TYPE should be memorized or recorded
                                                            (call-interactively #'mark-whole-buffer)
                                                            (delete-active-region)
                                                            (save-buffer))
-                                                         (when (not (= level (1+ level)))
+                                                         (when (= level 0)
                                                            (map-put! word-cache 'review-level (1+ level)))
+                                                         (when (string= (map-elt word-cache 'review-time) "null")
+                                                           (map-put! word-cache 'review-time (current-time-string)))
                                                          (f-append-text (json-serialize word-cache) 'utf-8 value))))
                      (puthash key "1" shengci-guess-word-score))
                  (puthash key "0" shengci-guess-word-score)))) 
@@ -563,7 +565,10 @@ The value of TYPE should be memorized or recorded
     (setq shengci-guess-word-score nil
           shengci-guess-word-score (make-hash-table :test 'equal))
     (with-current-buffer buf
-      (shengci--guess-word-main shengci-temp-words-hash-table "recorded"))))
+      (shengci--guess-word-main shengci-temp-words-hash-table "recorded")
+      (erase-buffer)
+      (insert "默写完成!\n")
+      (shengci--insert-score))))
 
 ;;;###autoload
 (defun practice-guess-memorized-word ()
@@ -573,7 +578,7 @@ The value of TYPE should be memorized or recorded
   (shengci--check-path)
   (shengci--set-all-word "memorized")
   (let* ((buf (get-buffer-create shengci-guess-memorized-word-buffer-name))
-         (level-lst (list "0 - 从未复习过" "1 - 二十分钟前复习过" "2 - 一小时前复习过" "3 - 九小时前复习过" "4 - 一天前复习过" "5 - 两天前复习过" "6 - 六天前复习过"))
+         (level-lst (list "0 - 从未复习过" "1 - 二十分钟至一小时前复习过" "2 - 一小时至九小时前复习过" "3 - 九小时至一天前复习过" "4 - 一天至两天前复习过" "5 - 两天前至六天复习过" "6 - 大于六天前复习过"))
          (level (string-to-number (completing-read "请选择复习等级: " level-lst)))
          (guess-memorized-word-hash-table (make-hash-table :test 'equal)))
     (pop-to-buffer buf)
@@ -592,10 +597,10 @@ The value of TYPE should be memorized or recorded
                                                     (time-convert (if (string= word-review-time "null")
                                                                       (current-time)
                                                                     (date-to-time word-review-time)) 'integer))))
-                               
-                               ;; 20小时~1小时之间前复习过
+                               ;; 20分钟~1小时之间前复习过
                                (when (and (>= time-interval 1)
                                           (< time-interval (* 20 60)))
+                                 (message "20分钟~1小时")
                                  (puthash key val guess-memorized-word-hash-table))))
                            shengci-temp-words-hash-table))
      ((= level 2) (maphash (lambda (key val)
@@ -667,6 +672,9 @@ The value of TYPE should be memorized or recorded
           shengci-guess-word-score (make-hash-table :test 'equal))
     (with-current-buffer buf
       (shengci--guess-word-main guess-memorized-word-hash-table "memorized" level)
+      (erase-buffer)
+      (insert "默写完成!\n")
+      (shengci--insert-score)
       ))))
 
 (provide 'shengci)
