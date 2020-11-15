@@ -80,24 +80,8 @@ shengci插件的缓存目录路径"
   :group 'shengci)
 
 ;;;###autoload
-;; (defun shengci ()
-;;   "Initialize shengci buffer when shengci-mode is activated.
-;; 激活shengci-mode时初始化shengci buffer"
-;;   (if (get-buffer shengci-buffer-name)
-;;       (switch-to-buffer shengci-buffer-name)
-;;     (unless (buffer-live-p (get-buffer shengci-buffer-name))
-;;       (switch-to-buffer shengci-buffer-name))
-;;     (shengci-interface-init)))
 
 (define-namespace shengci-
-
-;; (defmacro with-suppressed-message (&rest body)
-;;   "Suppress new messages temporarily in the echo area and
-;;        the
-;;        `*Messages*` buffer while BODY is evaluated."
-;;   (declare (indent 0))
-;;   (let ((message-log-max nil))
-;;     `(with-temp-message (or (current-message) "") ,@body)))
 
 ;;;###autoload
 (defun -check-path ()
@@ -226,15 +210,15 @@ WORD 要跟改为背熟的单词."
 
       ;; Second, reset the end-time object of the word to the current time
       ;; 其次将单词的 end-time 对象重置为当前时间
-      (map-put! cache-word-json-data 'end-time (current-time-string))
+      (setq cache-word-json-data (map-insert cache-word-json-data 'end-time (current-time-string)))
       
       ;; Initialize the last review time to nil
       ;; 初始化上次复习时间为null
-      (map-put cache-word-json-data 'review-time "null")
+      (setq cache-word-json-data (map-insert cache-word-json-data 'review-time "null"))
       
       ;; 初始化复习等级为0
       ;; Initialize the last review time to nil
-      (map-put cache-word-json-data 'review-level 0)
+      (setq cache-word-json-data (map-insert cache-word-json-data 'review-level 0))
       
       ;; Re-add the modified data to the remembered word cache file
       ;; 将修改好的数据重新加入到已记住单词缓存文件中
