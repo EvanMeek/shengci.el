@@ -114,7 +114,7 @@ WORD 要保存的单词"
                                                     (thing-at-point 'word)
                                                   word)))
          (word-eng (cdr (assoc 'query word-info)))
-         (word-basic (cdr (assoc 'basic word-info)))
+         (word-basic (downcase (cdr (assoc 'basic word-info))))
          (word-phonetic (cdr (assoc 'us-phonetic word-basic)))
          (word-explains (cdr (assoc 'explains word-basic)))
          (all-words-cache (if (string= (f-read-text shengci-cache-word-file-path) "")
@@ -519,10 +519,11 @@ The value of TYPE should be memorized or recorded
                      (overlay-put ov 'face '(:underline t))
                      (overlay-put ov 'display (make-string 1 ?\s))
                      (push ov ovs))))
-               (if (string= key (read-string "英文(C-g取消练习): "))
+               ;; (message "key: %s\ttype: %s" key (type-of key))
+               (if (string= (downcase (symbol-name key)) (downcase (read-string "英文(C-g取消练习): ")))
                    (progn
-                     ;; 将单词设置为已背熟
-                     (cond ((string= type "recorded") (shengci--memorized-word key))
+                     ;; 将单词设置为已背熟或设置上次复习时间
+                     (cond ((string= type "recorded") (shengci--memorized-word (symbol-name key)))
                            ((string= type "memorized") (let ((word-cache (json-read-file value)))
                                                          (with-temp-file value
                                                            (call-interactively #'mark-whole-buffer)
