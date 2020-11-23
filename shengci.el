@@ -86,7 +86,7 @@ shengci插件的缓存目录路径"
 
 
 (define-minor-mode shengci-mode "shengci"
-  :lighter "shengci-recorded-mode"
+  :lighter " ShengCi"
   :group 'shengci
   :keymap shengci-mode-map
   (display-line-numbers-mode -1)
