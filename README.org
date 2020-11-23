@@ -1,21 +1,20 @@
 * 简介
   这个插件用于记录生词和管理生词。
 
-
   [[file:img/show-word-preview.gif]]
 
   [[file:img/guess-word-preview.gif]]
 
 * 使用帮助
 ** 安装
-   **Vanlia Emacs**
+   ~Vanlia Emacs~
 
    #+begin_src emacs-lisp
    (load-file path/to/shengci.el)  
    (require 'shengci)
    #+end_src
 
-   **Use-Package**
+   ~Use-Package~
    #+begin_src emacs-lisp
      (use-package shengci
        :load-path "path/to/shengci.el/")
@@ -38,6 +37,12 @@
      键入 ~M-x shengci-practice-recorded-guess-word~ ，进行猜已记录单词游戏。
 
      键入 ~M-x shengci-practice-memorized-guess-word~ ，进行猜已背熟单词游戏。
+*** key
+    | key | func                  | desc                    |
+    |-----+-----------------------+-------------------------|
+    | n   | shengci-forward-word  | jump to forward word.   |
+    | p   | shengci-backward-word | jump to backward word.  |
+    | RET | nil                   | hide or show word info. |
 
 ** 艾宾浩斯遗忘曲线式记词方式
    1. 首先将recorded的单词标记为memorized

@@ -43,6 +43,11 @@
 ;; 猜单词的成绩，数据例子: (单词A 1 单词B 0 单词C 1)，其中value为1代表正确，0代表错误。
 (defvar shengci-guess-word-score (make-hash-table :test 'equal) "The socre for guess word game.")
 
+(defvar shengci-mode-map (let ((map (make-sparse-keymap)))
+                           (define-key map (kbd "p") 'shengci--backward-word)
+                           (define-key map (kbd "n") 'shengci--forward-word)
+                           map) "Keymap for `shengci-mode'")
+
 (defcustom shengci-word-info nil
   "The info of word.
 单词的信息"
@@ -79,9 +84,27 @@ shengci插件的缓存目录路径"
   :type 'string
   :group 'shengci)
 
-;;;###autoload
+
+(define-minor-mode shengci-mode "shengci"
+  :lighter "shengci-recorded-mode"
+  :group 'shengci
+  :keymap shengci-mode-map
+  (display-line-numbers-mode -1)
+  (toggle-truncate-lines t))
 
 (define-namespace shengci-
+
+;;;###autoload
+(defun -backward-word ()
+  (interactive)
+  (when (search-backward "朗读" nil t)
+    (call-interactively #'previous-line)) )
+
+;;;###autoload
+(defun -forward-word ()
+  (interactive)
+  (when (search-forward "朗读" nil t)
+      (call-interactively #'next-line)))
 
 ;;;###autoload
 (defun -check-path ()
@@ -113,8 +136,8 @@ WORD 要保存的单词"
   (let* ((word-info (youdao-dictionary--request (if (null word)
                                                     (thing-at-point 'word)
                                                   word)))
-         (word-eng (cdr (assoc 'query word-info)))
-         (word-basic (downcase (cdr (assoc 'basic word-info))))
+         (word-eng (downcase (cdr (assoc 'query word-info))))
+         (word-basic (cdr (assoc 'basic word-info)))
          (word-phonetic (cdr (assoc 'us-phonetic word-basic)))
          (word-explains (cdr (assoc 'explains word-basic)))
          (all-words-cache (if (string= (f-read-text shengci-cache-word-file-path) "")
@@ -123,7 +146,6 @@ WORD 要保存的单词"
     ;; (message "english: %s\nphonetic: %s\n explains: %s\n web: %s" word-eng word-phonetic word-explains word-web)
 
     (setq shengci-cache-word-file-path-format (concat  shengci-cache-word-dir-path word-eng "-cache.json"))
-
     ;; if word cache file not found, create it.
     ;; 如果word这个单词缓存文件不存在，则创建它。
     (when (not (file-exists-p shengci-cache-word-file-path-format))
@@ -447,12 +469,22 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
 (defun show-recorded-word ()
   "Show all recorded-word , Does not contain memorized word."
   (interactive)
+  (if (get-buffer shengci-record-buffer-name)
+      (switch-to-buffer shengci-record-buffer-name)
+    (unless (buffer-live-p (get-buffer shengci-record-buffer-name))
+      (switch-to-buffer shengci-record-buffer-name))
+    (shengci-mode))
   (shengci-show-word "recorded"))
 
 ;;;###autoload
 (defun show-memorized-word ()
   "Show all memorized word."
   (interactive)
+  (if (get-buffer shengci-memorized-buffer-name)
+      (switch-to-buffer shengci-memorized-buffer-name)
+    (unless (buffer-live-p (get-buffer shengci-memorized-buffer-name))
+      (switch-to-buffer shengci-memorized-buffer-name))
+    (shengci-mode))
   (shengci-show-word "memorized"))
 
 ;;;###autoload
@@ -471,7 +503,7 @@ The value of TYPE should be memorized or recorded
               (cond ((string= type "memorized") (when (not (string= (map-elt (json-read-file (cdr word)) 'end-time) "null"))
                                                   (puthash (car word) (cdr word) shengci-temp-words-hash-table))) 
                     ((string= type "recorded") (when (string= (map-elt (json-read-file (cdr word)) 'end-time) "null")
-                                                  (puthash (car word) (cdr word) shengci-temp-words-hash-table)))))
+                                                 (puthash (car word) (cdr word) shengci-temp-words-hash-table)))))
             all-cache-words)))
 
 ;;;###autoload
