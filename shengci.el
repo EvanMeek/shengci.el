@@ -104,7 +104,7 @@ shengci插件的缓存目录路径"
 (defun -forward-word ()
   (interactive)
   (when (search-forward "朗读" nil t)
-      (call-interactively #'next-line)))
+    (call-interactively #'next-line)))
 
 ;;;###autoload
 (defun -check-path ()
@@ -519,6 +519,15 @@ The value of TYPE should be memorized or recorded
              shengci-guess-word-score)
     (insert "正确: " (number-to-string true) "\t" "错误: " (number-to-string false))))
 
+;;;###autoload
+(defun -insert-error-word ()
+  "Insert the wrong word in practice.
+插入在练习中出错的单词."
+  (insert "\n以下是错误的单词: \n")
+  (maphash (lambda (k v)
+             (when (string= v "0")
+               (insert (symbol-name k) "\n")))
+           shengci-guess-word-score))
 
 ;;;###autoload
 (defun -guess-word-main (hash-table type &optional level)
@@ -585,7 +594,8 @@ The value of TYPE should be memorized or recorded
       (shengci--guess-word-main shengci-temp-words-hash-table "recorded")
       (erase-buffer)
       (insert "默写完成!\n")
-      (shengci--insert-score))))
+      (shengci--insert-score)
+      (shengci--insert-error-word))))
 
 ;;;###autoload
 (defun practice-guess-memorized-word ()
@@ -692,6 +702,7 @@ The value of TYPE should be memorized or recorded
       (erase-buffer)
       (insert "默写完成!\n")
       (shengci--insert-score)
+      (shengci--insert-error-word)
       ))))
 
 (provide 'shengci)
