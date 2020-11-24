@@ -23,14 +23,14 @@
    * 捕获生词
 
 	 将光标放在一个单词上，键入 ~M-x shengci-capture-word-and-save~ 。
-
+e
    * 查看所有已记录单词(不包括已背熟的单词)
 
-	 键入 ~M-x shengci-recorded-word~
+	 键入 ~M-x shengci-show-recorded-word~
 
    * 查看所有已背熟单词
 	 
-	 键入 ~M-x shengci-memorized-word~
+	 键入 ~M-x shengci-show-memorized-word~
 
    * 猜单词游戏
 
