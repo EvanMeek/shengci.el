@@ -46,6 +46,7 @@
 (defvar shengci-mode-map (let ((map (make-sparse-keymap)))
                            (define-key map (kbd "p") 'shengci--backward-word)
                            (define-key map (kbd "n") 'shengci--forward-word)
+                           (define-key map (kbd "g") 'shengci-refresh-buffer-content)
                            map) "Keymap for `shengci-mode'")
 
 (defcustom shengci-word-info nil
@@ -453,6 +454,7 @@ memorized意味着显示显示已背熟单词，recored意味显示已记录单�
 
 ;;;###autoload
 (defun refresh-buffer-content ()
+  (interactive)
   "Refresh record buffer or memorzied buffer content."
   (cond ((string= (buffer-name) shengci-record-buffer-name)
          (shengci-show-word "recorded"))
