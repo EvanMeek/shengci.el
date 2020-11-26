@@ -44,9 +44,10 @@
 (defvar shengci-guess-word-score (make-hash-table :test 'equal) "The socre for guess word game.")
 
 (defvar shengci-mode-map (let ((map (make-sparse-keymap)))
-                           (define-key map (kbd "p") 'shengci--backward-word)
-                           (define-key map (kbd "n") 'shengci--forward-word)
-                           (define-key map (kbd "g") 'shengci-refresh-buffer-content)
+                           (define-key map (kbd "k") 'shengci--backward-word)
+                           (define-key map (kbd "j") 'shengci--forward-word)
+                           (define-key map (kbd "r") 'shengci-refresh-buffer-content)
+                           (define-key map (kbd "SPC") 'push-button)
                            map) "Keymap for `shengci-mode'")
 
 (defcustom shengci-word-info nil
@@ -105,7 +106,11 @@ shengci插件的缓存目录路径"
 (defun -forward-word ()
   (interactive)
   (when (search-forward "朗读" nil t)
-    (call-interactively #'next-line)))
+    (call-interactively #'next-line)
+    (when (string-match-p "加入时间" (buffer-substring (line-beginning-position) (line-end-position)))
+      (progn
+        (search-forward "朗读" nil t)
+        (call-interactively #'previous-line)) )))
 
 ;;;###autoload
 (defun -check-path ()

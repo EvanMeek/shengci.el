@@ -23,7 +23,7 @@
    * 捕获生词
 
 	 将光标放在一个单词上，键入 ~M-x shengci-capture-word-and-save~ 。
-e
+
    * 查看所有已记录单词(不包括已背熟的单词)
 
 	 键入 ~M-x shengci-show-recorded-word~
@@ -40,10 +40,10 @@ e
 *** key
     | key | func                           | desc                    |
     |-----+--------------------------------+-------------------------|
-    | n   | shengci-forward-word           | jump to forward word.   |
-    | p   | shengci-backward-word          | jump to backward word.  |
+    | j  | shengci-forward-word           | jump to forward word.   |
+    | k  | shengci-backward-word          | jump to backward word.  |
     | RET | nil                            | hide or show word info. |
-    | g   | shengci-refresh-buffer-content | refresh current buffer. |
+    | r  | shengci-refresh-buffer-content | refresh current buffer. |
 
 ** 艾宾浩斯遗忘曲线式记词方式
    1. 首先将recorded的单词标记为memorized
