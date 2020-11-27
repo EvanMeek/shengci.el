@@ -24,6 +24,15 @@
 
 	 将光标放在一个单词上，键入 ~M-x shengci-capture-word-and-save~ 。
 
+   * 捕获指定单词
+     
+     ~(shengci-capture-word-and-save 'hello)~
+     
+     or
+     
+     ~(shengci-capture-word-and-save "hello")~
+     
+
    * 查看所有已记录单词(不包括已背熟的单词)
 
 	 键入 ~M-x shengci-show-recorded-word~

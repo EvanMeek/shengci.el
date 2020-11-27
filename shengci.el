@@ -262,7 +262,7 @@ WORD 要跟改为背熟的单词."
 
 ;;;###autoload
 (defun re-record-word (word)
-  "Re-record  the word.
+  "Re-record the word.
 重新记录单词。
 WORD 要重记的单词。"
   (let ((all-memorized-word-json-data (if (string= (f-read-text shengci-cache-memorized-word-file-path) "")
