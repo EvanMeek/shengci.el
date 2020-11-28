@@ -49,10 +49,11 @@
 *** key
     | key | func                           | desc                    |
     |-----+--------------------------------+-------------------------|
-    | j  | shengci-forward-word           | jump to forward word.   |
-    | k  | shengci-backward-word          | jump to backward word.  |
+    | j   | shengci--forward-word          | jump to forward word.   |
+    | k   | shengci--backward-word         | jump to backward word.  |
     | RET | nil                            | hide or show word info. |
-    | r  | shengci-refresh-buffer-content | refresh current buffer. |
+    | r   | shengci-refresh-buffer-content | refresh current buffer. |
+    | t   | shengci--show-hide-word        | Show all hidden words. |
 
 ** 艾宾浩斯遗忘曲线式记词方式
    1. 首先将recorded的单词标记为memorized
