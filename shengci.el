@@ -48,7 +48,7 @@
                            (define-key map (kbd "j") 'shengci--forward-word)
                            (define-key map (kbd "r") 'shengci-refresh-buffer-content)
                            (define-key map (kbd "SPC") 'push-button)
-                           (define-key map (kbd "t") 'shengci--show-hidden-word)
+                           (define-key map (kbd "t") 'shengci--show-hidden-words)
                            map) "Keymap for `shengci-mode'")
 
 (defcustom shengci-word-info nil
@@ -725,9 +725,7 @@ The value of TYPE should be memorized or recorded
         (while (search-backward "朗读" nil t)
           (call-interactively #'previous-line)
           (push-button)))
-    (message "当前BUFFER不是ShengCi插件的BUFFER.")))
- 
-)
+    (message "当前BUFFER不是ShengCi插件的BUFFER."))))
 
 (provide 'shengci)
 ;;; shengci.el ends here
