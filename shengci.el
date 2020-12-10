@@ -150,36 +150,38 @@ WORD 要保存的单词"
          (all-words-cache (if (string= (f-read-text shengci-cache-word-file-path) "")
                               nil
                             (json-read-file shengci-cache-word-file-path))))
-    ;; (message "english: %s\nphonetic: %s\n explains: %s\n web: %s" word-eng word-phonetic word-explains word-web)
+    (cl-block nil
+      (when (null word-explains)
+        (message "%s不是一个英文单词." word-eng)
+        (cl-return t))
+      (setq shengci-cache-word-file-path-format (concat  shengci-cache-word-dir-path word-eng "-cache.json"))
+      ;; if word cache file not found, create it.
+      ;; 如果word这个单词缓存文件不存在，则创建它。
+      (if (not (file-exists-p shengci-cache-word-file-path-format))
+          (progn
+            (f-write-text "" 'utf-8 shengci-cache-word-file-path-format)
+            ;; insert word info to cache file.
+            ;; 插入单词信息到缓存文件中。
+            (f-append-text (concat "{\n"
+                                   "\"english\" : \"" word-eng "\",\n"
+                                   "\"start-time\" : \"" (current-time-string) "\",\n"
+                                   "\"end-time\" : \"" (json-encode nil) "\",\n"
+                                   "\"phonetic\" : \"" word-phonetic "\",\n"
+                                   "\"explains\" : " (json-encode-array word-explains)  "\n"
+                                   "}\n") 'utf-8 shengci-cache-word-file-path-format)
 
-    (setq shengci-cache-word-file-path-format (concat  shengci-cache-word-dir-path word-eng "-cache.json"))
-    ;; if word cache file not found, create it.
-    ;; 如果word这个单词缓存文件不存在，则创建它。
-    (if (not (file-exists-p shengci-cache-word-file-path-format))
-        (progn
-          (f-write-text "" 'utf-8 shengci-cache-word-file-path-format)
-          ;; insert word info to cache file.
-          ;; 插入单词信息到缓存文件中。
-          (f-append-text (concat "{\n"
-                                 "\"english\" : \"" word-eng "\",\n"
-                                 "\"start-time\" : \"" (current-time-string) "\",\n"
-                                 "\"end-time\" : \"" (json-encode nil) "\",\n"
-                                 "\"phonetic\" : \"" word-phonetic "\",\n"
-                                 "\"explains\" : " (json-encode-array word-explains)  "\n"
-                                 "}\n") 'utf-8 shengci-cache-word-file-path-format)
+            ;; delete shengci-cache-word-file-path's content
+            ;; 删除shengci-cache-word-file-path的内容
+            (with-temp-file shengci-cache-word-file-path
+              (mark-whole-buffer)
+              (delete-active-region))
 
-          ;; delete shengci-cache-word-file-path's content
-          ;; 删除shengci-cache-word-file-path的内容
-          (with-temp-file shengci-cache-word-file-path
-            (mark-whole-buffer)
-            (delete-active-region))
-
-          ;; Add the current file path to the total word cache file
-          ;; 添加当前文件路径到所有单词缓存文件中。
-          (f-append-text (json-serialize
-                          (json-add-to-object all-words-cache word-eng shengci-cache-word-file-path-format)) 'utf-8 shengci-cache-word-file-path))
-      (message "此单词已被记录")
-      )))
+            ;; Add the current file path to the total word cache file
+            ;; 添加当前文件路径到所有单词缓存文件中。
+            (f-append-text (json-serialize
+                            (json-add-to-object all-words-cache word-eng shengci-cache-word-file-path-format)) 'utf-8 shengci-cache-word-file-path))
+        (message "此单词已被记录")
+        ))))
 ;;;###autoload
 (defun remove-word-forever (word)
   "Delete a recorded or memorized word forever.
