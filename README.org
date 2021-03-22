@@ -6,7 +6,12 @@
   [[file:img/guess-word-preview.gif]]
 
 * 使用帮助
+
+  
+** 依赖
+   [[https://github.com/xuchunyang/youdao-dictionary.el][有道词典-Emacs]]
 ** 安装
+
    ~Vanlia Emacs~
 
    #+begin_src emacs-lisp
@@ -19,18 +24,25 @@
      (use-package shengci
        :load-path "path/to/shengci.el/")
    #+end_src
+
+   ~Quelpa~
+   #+begin_src emacs-lisp
+     (use-package shengci
+       :quelpa ((shengci :fetcher github :repo "EvanMeek/shengci.el")))
+   #+end_src
 ** 使用
    * 捕获生词
 
+     选择一个区域，键入 ~M-x shengci-capture-word-and-save~ ，将会尝试把选区内的所有单词都添加为生词。
 	 将光标放在一个单词上，键入 ~M-x shengci-capture-word-and-save~ 。
 
    * 捕获指定单词
      
-     ~(shengci-capture-word-and-save 'hello)~
+     ~(shengci-capture-word-and-save-lib 'hello)~
      
      or
      
-     ~(shengci-capture-word-and-save "hello")~
+     ~(shengci-capture-word-and-save-lib "hello")~
      
 
    * 查看所有已记录单词(不包括已背熟的单词)
@@ -47,13 +59,13 @@
 
      键入 ~M-x shengci-practice-memorized-guess-word~ ，进行猜已背熟单词游戏。
 *** key
-    | key | func                           | desc                    |
-    |-----+--------------------------------+-------------------------|
-    | j   | shengci--forward-word          | jump to forward word.   |
-    | k   | shengci--backward-word         | jump to backward word.  |
-    | RET | nil                            | hide or show word info. |
-    | r   | shengci-refresh-buffer-content | refresh current buffer. |
-    | t   | shengci--show-hide-word        | Show all hidden words. |
+    | key | func                           | desc                  |
+    |-----+--------------------------------+-----------------------|
+    | j   | shengci--forward-word          | 跳转至上个单词.       |
+    | k   | shengci--backward-word         | 跳转至下个单词.       |
+    | RET | nil                            | 隐藏单词信息.         |
+    | r   | shengci-refresh-buffer-content | 刷新Buffer.           |
+    | t   | shengci--show-hide-word        | 显示所有隐藏单词信息. |
 
 ** 艾宾浩斯遗忘曲线式记词方式
    1. 首先将recorded的单词标记为memorized
@@ -74,12 +86,15 @@
   有任何问题可以给我提交Issue.本人正在尝试将其整合成一个能上传至mepla的插件。
 * 感谢
   猜单词功能灵感来自[[https://github.com/Qquanwei/emacs-guess-word-game][emacs-guess-word-game]]
-  艾宾浩斯遗忘曲线式记词方式灵感来自 ~emacs-china~ 论坛 用户 **lyjdwh** 的[[https://emacs-china.org/t/shengci-el/15049/17?u=evanmeek][建议]]。
+  艾宾浩斯遗忘曲线式记词方式灵感来自 ~emacs-china~ 论坛 用户 **lyjdwh** 的 [[https://emacs-china.org/t/shengci-el/15049/17?u=evanmeek][建议]]。
 * TODO
-  | 简介     | 功能                           | 进度   |
-  |----------+--------------------------------+--------|
-  | 猜单词   | 用户根据中文翻译输入对应的英文 | 已实现 |
-  | 复习算法 | 对单词复习引入一定算法         | 已实现 |
+  | 简介     | 功能                            | 进度   |
+  |----------+---------------------------------+--------|
+  | 猜单词   | 用户根据中文翻译输入对应的英文  | 已实现 |
+  | 复习算法 | 对单词复习引入一定算法          | 已实现 |
+  | 取消依赖 | 不要依赖有道词典                | 未实现 |
+  | 提升性能 | 使用Rust作为后端，Emacs作为前端 | 构思中 |
+  | 美化UI   | 做更简单易懂的UI                | 构思中    |
 
   
 

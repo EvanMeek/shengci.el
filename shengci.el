@@ -132,9 +132,28 @@ if not found, create they.
   ;; 检查所有已记住单词缓存文件路径
   (when (not (file-exists-p shengci-cache-memorized-word-file-path))
     (f-write "" 'utf-8 shengci-cache-memorized-word-file-path)))
-
 ;;;###autoload
-(defun capture-word-and-save (&optional word)
+(defun capture-word-and-save (start end)
+  "Capture region word or point word to all recoreded.
+捕获选区中的单词或光标下的单词为生词。"
+  (interactive (if current-prefix-arg
+                   (list nil nil)
+                 (list (region-beginning) (region-end))))
+  (if (use-region-p)
+      (let (word-lst
+            (start (region-beginning))
+            (end (region-end)))
+        (save-excursion
+          (save-restriction
+            (narrow-to-region start end)
+            (goto-char (point-min))
+            (while (forward-word-strictly 1)
+              (push (thing-at-point 'word) word-lst))))
+        (dolist (w word-lst)
+          (capture-word-and-save-lib w)))
+    (call-interactively 'capture-word-and-save-lib)))
+;;;###autoload
+(defun capture-word-and-save-lib (&optional word)
   "Capture new word and save to all recorded word cache file.
 捕获新的生词，并且保存到生词缓存文件中
 WORD 要保存的单词"
