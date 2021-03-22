@@ -151,7 +151,7 @@ if not found, create they.
               (push (thing-at-point 'word) word-lst))))
         (dolist (w word-lst)
           (capture-word-and-save-lib w)))
-    (call-interactively 'capture-word-and-save-lib)))
+    (call-interactively 'shengci-capture-word-and-save-lib)))
 ;;;###autoload
 (defun capture-word-and-save-lib (&optional word)
   "Capture new word and save to all recorded word cache file.
