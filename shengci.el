@@ -202,6 +202,14 @@ WORD 要保存的单词"
         (message "此单词已被记录")
         ))))
 ;;;###autoload
+(defun shengci-capture-word (word)
+  "Capture a word from minibuffer.
+从 minibuffer 抓取词语"
+  (interactive "M输入英语词语: ")
+  (if (> (length (split-string word " " t)) 1)
+      (message "%s并非一个单词" word)
+    (shengci-capture-word-and-save-lib word)))
+;;;###autoload
 (defun remove-word-forever (word)
   "Delete a recorded or memorized word forever.
 永久删除一个已记录或已记住的单词
