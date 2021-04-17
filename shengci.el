@@ -202,7 +202,7 @@ WORD 要保存的单词"
         (message "此单词已被记录")
         ))))
 ;;;###autoload
-(defun shengci-capture-word (word)
+(defun capture-word (word)
   "Capture a word from minibuffer.
 从 minibuffer 抓取词语"
   (interactive "M输入英语词语: ")
